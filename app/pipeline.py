@@ -22,7 +22,7 @@ def ingest(path=None):
 
     store.build(chunks, metadatas)     # dense index
     retriever.index_sparse(chunks)     # sparse index
-
+    print("Chunks ingested and indexed.",chunks)
     return chunks
 
 
