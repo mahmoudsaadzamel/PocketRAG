@@ -10,7 +10,7 @@ Run it:      python -m app.pipeline
 """
 from pathlib import Path
 
-from app import chunker, config, generator, retriever, store
+from app import RRF, chunker, config, generator, retriever, store
 
 
 def ingest(path=None):
@@ -20,23 +20,26 @@ def ingest(path=None):
 
     chunks, metadatas = chunker.chunk_document(text, source=Path(path).name)
 
-    store.build(chunks, metadatas)     # dense index
-    retriever.index_sparse(chunks)     # sparse index
-    print("Chunks ingested and indexed.",chunks)
+    store.build(chunks, metadatas)                # dense index
+    retriever.index_sparse(chunks, metadatas)     # sparse index
+    print(f"Chunks ingested and indexed: {len(chunks)}")
     return chunks
 
 
-def ask(question, how="dense", k=None):
+def ask(question, how="hybrid", k=None):
     """Retrieve, then generate. The two halves of RAG, in four lines."""
-    search = retriever.search_dense if how == "dense" else retriever.search_sparse
-    hits = search(question, k)
+    search = {
+        "dense": retriever.search_dense,
+        "sparse": retriever.search_sparse,
+        "hybrid": RRF.search_hybrid,          # SESSION 4: the default now
+    }[how]
+    hits = search(question, k or config.TOP_K)
     context = "\n\n".join(h["text"] for h in hits)
     return generator.answer(context, question), hits
 
 
 def main():
-    chunks = ingest()
-    print(f"Ingested {len(chunks)} chunks from {config.DATA_FILE}\n")
+    ingest()
 
     question = "How long does international shipping take?"
     answer, hits = ask(question)
@@ -44,6 +47,9 @@ def main():
     print("Q:", question)
     print("Retrieved:", [h["meta"].get("chunk_index") for h in hits])
     print("A:", answer)
+    print()
+    print("Embedding model (local):", config.EMBED_MODEL)
+    print("Answer model (Groq):    ", generator.connect()[1])
 
 
 if __name__ == "__main__":

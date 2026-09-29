@@ -18,6 +18,7 @@ from app import config, embedder, store
 
 _bm25 = None
 _bm25_chunks = []
+_bm25_metas = []
 
 
 def tokenize(text):
@@ -56,15 +57,16 @@ def search_dense(question, k=None):
 
 
 # ----------------------------------------------------------------- sparse
-def index_sparse(chunks):
+def index_sparse(chunks, metadatas=None):
     """
     Build the BM25 index. Pure Python, no model, no network, instant.
 
     BM25 scores a chunk by how many of the query's words it contains,
     weighted so that rare words count for more than common ones.
     """
-    global _bm25, _bm25_chunks
+    global _bm25, _bm25_chunks, _bm25_metas
     _bm25_chunks = chunks
+    _bm25_metas = metadatas or [{} for _ in chunks]
     _bm25 = BM25Okapi([tokenize(c) for c in chunks])
 
 
@@ -75,8 +77,8 @@ def search_sparse(question, k=None):
         raise RuntimeError("Call index_sparse(chunks) first.")
 
     scores = _bm25.get_scores(tokenize(question))
-    ranked = sorted(zip(_bm25_chunks, scores), key=lambda pair: -pair[1])
+    ranked = sorted(zip(_bm25_chunks, _bm25_metas, scores), key=lambda row: -row[2])
     return [
-        {"text": text, "meta": {}, "score": score, "how": "sparse"}
-        for text, score in ranked[:k]
+        {"text": text, "meta": meta, "score": score, "how": "sparse"}
+        for text, meta, score in ranked[:k]
     ]
