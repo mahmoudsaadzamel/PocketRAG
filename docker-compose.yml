@@ -1,0 +1,32 @@
+# docker-compose is for when "run the app" means more than one command.
+#
+# Instead of remembering the build flags, the env file and the volume
+# mounts every time, you write them down once, here, and then everyone
+# on the team starts the whole thing the same way:
+#
+#     docker compose up
+#
+# That single command is the entire point of this file.
+
+services:
+  rag:
+    build: .                  # use the Dockerfile in this folder
+
+    env_file:
+      - .env                  # the API key is read from here, never from the code
+
+    volumes:
+      # Map the data folder on your machine to the one inside the container.
+      # Edit a document locally and the container sees the change immediately,
+      # with no rebuild.
+      - ./data:/app/data
+
+      # Keep the database outside the container so it survives a restart.
+      # Without this line, everything you ingested disappears when the
+      # container stops.
+      - ./chroma:/app/chroma
+
+    # Keeps the container alive so you can open a shell inside it:
+    #     docker compose run rag python -m app.pipeline
+    stdin_open: true
+    tty: true

@@ -1,0 +1,7 @@
+# Pinned so that everyone on the team, and the container, install the same
+# thing. Unpinned versions are how "it worked yesterday" happens.
+chromadb==1.5.9
+sentence-transformers==6.1.0
+langchain-text-splitters==1.0.0
+rank-bm25==0.2.2
+openai==2.9.0
